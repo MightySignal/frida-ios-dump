@@ -44,7 +44,7 @@ file_dict = {}
 finished = threading.Event()
 
 
-def get_usb_iphone():
+def get_usb_iphone(device_id=None):
     Type = 'usb'
     if int(frida.__version__.split('.')[0]) < 12:
         Type = 'tether'
@@ -58,12 +58,14 @@ def get_usb_iphone():
 
     device = None
     while device is None:
-        devices = [dev for dev in device_manager.enumerate_devices() if dev.type == Type]
-        if len(devices) == 0:
+        for dev in device_manager.enumerate_devices():
+            if dev.type != Type: continue
+            if device_id is not None and dev.id != device_id: continue
+            device = dev
+            break
+        if device is None:
             print('Waiting for USB device...')
             changed.wait()
-        else:
-            device = devices[0]
 
     device_manager.off('changed', on_changed)
 
@@ -265,7 +267,7 @@ def open_target_app(device, name_or_bundleid):
         else:
             session = device.attach(pid)
     except Exception as e:
-        print(e) 
+        print(e)
 
     return session, display_name, bundle_identifier
 
@@ -292,6 +294,7 @@ if __name__ == '__main__':
     parser.add_argument('-u', '--user', dest='ssh_user', help='Specify SSH username')
     parser.add_argument('-P', '--password', dest='ssh_password', help='Specify SSH password')
     parser.add_argument('target', nargs='?', help='Bundle identifier or display name of the target app')
+    parser.add_argument('-i', '--id', dest='device_id', help='The UUID for the target device')
 
     args = parser.parse_args()
 
@@ -302,7 +305,7 @@ if __name__ == '__main__':
         parser.print_help()
         sys.exit(exit_code)
 
-    device = get_usb_iphone()
+    device = get_usb_iphone(device_id=args.device_id)
 
     if args.list_applications:
         list_applications(device)
