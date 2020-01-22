@@ -18,6 +18,7 @@ import tempfile
 import subprocess
 import re
 import paramiko
+import uuid
 from paramiko import SSHClient
 from scp import SCPClient
 from tqdm import tqdm
@@ -36,7 +37,7 @@ Password = 'alpine'
 Host = 'localhost'
 Port = 2222
 
-TEMP_DIR = tempfile.gettempdir()
+TEMP_DIR = os.path.join(tempfile.gettempdir(), 'frida-dump-' + str(uuid.uuid4()))
 PAYLOAD_DIR = 'Payload'
 PAYLOAD_PATH = os.path.join(TEMP_DIR, PAYLOAD_DIR)
 file_dict = {}
@@ -88,9 +89,9 @@ def generate_ipa(path, display_name):
         target_dir = './' + PAYLOAD_DIR
         zip_args = ('zip', '-qr', os.path.join(os.getcwd(), ipa_filename), target_dir)
         subprocess.check_call(zip_args, cwd=TEMP_DIR)
-        shutil.rmtree(PAYLOAD_PATH)
+        shutil.rmtree(TEMP_DIR)
     except Exception as e:
-        print(e)
+        print('\n\n\n*********\n*ERROR GENERATING IPA:\n{}\n\n\n'.format(e))
         finished.set()
 
 def on_message(message, data):
@@ -350,7 +351,7 @@ if __name__ == '__main__':
     if ssh:
         ssh.close()
 
-    if os.path.exists(PAYLOAD_PATH):
-        shutil.rmtree(PAYLOAD_PATH)
+    if os.path.exists(TEMP_DIR):
+        shutil.rmtree(TEMP_DIR)
 
     sys.exit(exit_code)
