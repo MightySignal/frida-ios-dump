@@ -373,7 +373,10 @@ function loadAllDynamicLibrary(app_path) {
 function handleMessage(message) {
     modules = getAllAppModules();
     var app_path = ObjC.classes.NSBundle.mainBundle().bundlePath();
-    loadAllDynamicLibrary(app_path);
+    
+    if (!loadAllDynamicLibrary_v2(modules)) {
+        loadAllDynamicLibrary(app_path);
+    }
     // start dump
     modules = getAllAppModules();
     for (var i = 0; i  < modules.length; i++) {
@@ -387,3 +390,29 @@ function handleMessage(message) {
 }
 
 recv(handleMessage);
+
+function loadAllDynamicLibrary_v2(modules) {
+    if (!classHasMethod(ObjC.classes.NSFileManager, "- loadAllDynamicLibraryWithModules:")) {
+        console.log("[WARNING] Install `frida_helper` tweak to use new version");
+        return false
+    }
+
+    console.log("Using new version")
+
+    var defaultManager = ObjC.classes.NSFileManager.defaultManager();
+    var modulesArray = ObjC.classes.NSMutableArray.array();
+    for (var i = 0; i  < modules.length; i++) {
+        modulesArray.addObject_(ObjC.classes.NSString.stringWithString_(modules[i].path));
+    }
+    var res = defaultManager.loadAllDynamicLibraryWithModules_(modulesArray);
+    console.log("result: ", res);
+    return true
+}
+
+function classHasMethod(name, method) {
+    var k = ObjC.classes[name];
+    if (k.$ownMethods.indexOf(method) != -1) {
+        return true
+    }
+    return false
+}
