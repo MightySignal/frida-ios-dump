@@ -46,6 +46,7 @@ file_dict = {}
 
 finished = threading.Event()
 
+messagesQueue = []
 
 def get_usb_iphone(device_id=None):
     Type = 'usb'
@@ -97,6 +98,14 @@ def generate_ipa(path, display_name):
         finished.set()
 
 def on_message(message, data):
+    if 'payload' in message:
+        payload = message['payload']    
+        if 'done' in payload:
+            finished.set()
+        else:
+            messagesQueue.append(message)
+
+def handleMessage(message):
     t = tqdm(unit='B',unit_scale=True,unit_divisor=1024,miniters=1)
     last_sent = [0]
 
@@ -114,6 +123,7 @@ def on_message(message, data):
         payload = message['payload']
         if 'dump' in payload:
             origin_path = payload['path']
+            print("dump: {}".format(origin_path))
             dump_path = payload['dump']
 
             scp_from = dump_path
@@ -134,7 +144,7 @@ def on_message(message, data):
 
         if 'app' in payload:
             app_path = payload['app']
-
+            print("dump: {}".format(app_path))
             scp_from = app_path
             scp_to = PAYLOAD_PATH + '/'
             with SCPClient(ssh.get_transport(), progress = progress, socket_timeout = 60) as scp:
@@ -150,6 +160,7 @@ def on_message(message, data):
             file_dict['app'] = os.path.basename(app_path)
 
         if 'done' in payload:
+            print("dump finished")
             finished.set()
     t.close()
 
@@ -285,6 +296,9 @@ def start_dump(session, ipa_name):
     script = load_js_file(session, DUMP_JS)
     script.post('dump')
     finished.wait()
+
+    for m in messagesQueue:
+        handleMessage(m)
 
     generate_ipa(PAYLOAD_PATH, ipa_name)
 

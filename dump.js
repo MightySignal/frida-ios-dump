@@ -380,7 +380,7 @@ function handleMessage(message) {
     // start dump
     modules = getAllAppModules();
     for (var i = 0; i  < modules.length; i++) {
-        console.log("start dump " + modules[i].path);
+        // console.log("start dump " + modules[i].path);
         var result = dumpModule(modules[i].path);
         send({ dump: result, path: modules[i].path});
     }
